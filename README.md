@@ -2,7 +2,7 @@
 
 **An 8-state Markov regime model of weather for energy risk, built on open DWD data.**
 
-Status: **v0.1.0** — M1–M4 done on station 01443 (Freiburg). Numbers below are from real runs; see §12.
+Status: **v0.1.0 + M5** — M1–M4 done, M5 ablation run (8 states justified, see §12a). Numbers below are from real runs; see §12.
 
 ## 1. Idea
 
@@ -97,6 +97,7 @@ src/bagua_weather/
   ingest.py      # DWD fetch + load_hourly                                 [done M1]
   fit.py         # fit pipeline: classify->mask->pairs->fit->save          [done M2]
   report.py      # metrics.json + figures                                  [done M3]
+  ablation.py    # M5 state-count ablation + marginalized cross-check      [done M5]
   simulate.py    # scenario paths + payoff pricing                         [v0.2.0]
   cli.py         # `bagua fetch|fit|eval`                                  [done M2 fetch/fit]
 tests/           # pytest; synthetic-chain tests must keep passing
@@ -168,8 +169,56 @@ Findings:
 - Dwell comparison is right-censored by the daylight mask; cross-midnight regime persistence is unmeasured by construction.
 - GBM early stopping uses a *random* 15% of the train slice — not chronological — acceptable inside train, stated anyway.
 - Sun-column gaps: `sun_minutes` is missing for ~25% of rows (instrument outages), so "daylight states" understates true coverage.
-- M5 state-count ablation (4/8/16 states) not run — stretch goal, open.
-- Thresholds (sun 30min, wind 5m/s, wet 0.1mm) are the spec defaults; no sensitivity grid run yet.
+- M5 state-count ablation (4/8/16 states) — done, see §12a below; verdict: 8 states justified.
+- Thresholds (sun 30min, wind 5m/s, wet 0.1mm, temp 15°C) are the spec defaults; no sensitivity grid run yet.
+
+### 12a. M5 state-count ablation (real numbers, `bagua ablate`, split 2016-01-01)
+
+Five variants: all three 4-state drops, the 8-state model, and 16 states
+(+ `temp` bit from `TT_TU`, threshold 15.0°C = daylight median on 01443).
+Raw log loss is **not** comparable across class counts — a 4-class problem
+has a lower entropy ceiling — so the table leads with `skill` =
+LL(climatology) − LL(markov), the information the previous state buys.
+
+| Variant | States | Markov LL | Top-1 | Skill (nats) |
+|---|---|---|---|---|
+| sun×wet (drop wind) | 4 | 0.571 | 0.799 | 0.374 |
+| sun×wind (drop wet) | 4 | 0.615 | 0.806 | 0.524 |
+| wind×wet (drop sun) | 4 | 0.424 | 0.875 | 0.341 |
+| **sun×wind×wet** | **8** | **0.784** | **0.750** | **0.604** |
+| + temp | 16 | 0.935 | 0.721 | 1.083 |
+
+**Cross-check that actually compares like-with-like** (each richer chain's
+predictions marginalized onto the coarser target, scored on identical test
+rows — direct LL comparison):
+
+| Target | Native LL | Predicted by 8-state | Predicted by 16-state |
+|---|---|---|---|
+| sun×wet | 0.571 | 0.564 | 0.562 |
+| sun×wind | 0.615 | 0.605 | 0.602 |
+| wind×wet | 0.425 | 0.409 | 0.407 |
+| sun×wind×wet | 0.784 | — | **0.780** |
+
+**Verdict: 8 states is justified.**
+
+- Every one of the three bits earns its place: dropping any of them loses
+  0.08–0.26 nats of skill, and the dropped bits still help when folded back
+  (each marginalized row above beats its native 4-state model).
+- The 16-state +temp variant shows +0.479 nats of "skill" — but that mostly
+  reflects that temperature is highly persistent and the target is richer.
+  On the actual sun/wind/wet question it gains only **−0.004 LL** over the
+  native 8-state chain. The temp bit does not materially improve regime
+  prediction *for this project's purpose*.
+- Honest caveat: if a downstream payoff needs temperature (heating/cooling
+  demand), 16 states becomes the right space — the ablation shows the
+  information is there, just not needed for sun/wind/wet regimes.
+- Note the illustration of why raw LL can't be compared across state
+  counts: wind×wet has the *best* LL (0.424) and top-1 (0.875) yet the
+  *least* information (0.341 nats).
+
+Artifacts: `reports/ablation.json` (gitignored). Air temperature product
+`air_temperature`/`TT_TU` added as an *optional* ingest column `temp_c`
+(verified: °C, UTC from 1994-06-01 — inside the all-UTC window).
 
 ## License
 

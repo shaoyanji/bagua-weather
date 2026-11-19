@@ -34,11 +34,17 @@ DWD_BASE = (
 )
 PERIODS = ("historical", "recent")
 
-# product dir -> (value column, our column name)
+# product dir -> (value column, our column name); all three are required
 PRODUCTS = {
     "sun": ("SD_SO", "sun_minutes"),
     "wind": ("F", "wind_ms"),
     "precipitation": ("R1", "precip_mm"),
+}
+
+# M5 ablation input: fetched when present, skipped silently when absent so
+# existing caches and fixtures still load.
+OPTIONAL_PRODUCTS = {
+    "air_temperature": ("TT_TU", "temp_c"),
 }
 
 # Verified 2026-11-19: station 01443 is UTC across all three products only from
@@ -108,7 +114,7 @@ def fetch_station(station_id: str, cache_dir: str = "data/raw") -> dict[str, lis
     """
     cache = Path(cache_dir)
     found: dict[str, list[str]] = {}
-    for product in PRODUCTS:
+    for product in {**PRODUCTS, **OPTIONAL_PRODUCTS}:
         paths: list[Path] = []
         for period in PERIODS:
             period_dir = cache / product / period
@@ -149,7 +155,7 @@ def _product_frame(cache: Path, product: str, station_id: str) -> pd.Series:
     On overlapping timestamps the 'recent' file wins (it carries the latest
     quality control); within a file the first occurrence wins.
     """
-    col, _ = PRODUCTS[product]
+    col, _ = {**PRODUCTS, **OPTIONAL_PRODUCTS}[product]
     recent, historical = [], []
     for p in _produkt_files(cache, product, station_id):
         s = _read_produkt(p, col)
@@ -189,6 +195,9 @@ def load_hourly(
                 "run `bagua fetch` first"
             )
         cols[out_name] = _product_frame(cache, product, station_id)
+    for product, (_, out_name) in OPTIONAL_PRODUCTS.items():
+        if _produkt_files(cache, product, station_id):
+            cols[out_name] = _product_frame(cache, product, station_id)
     df = pd.concat(cols, axis=1)
     df.index.name = "timestamp"
     if since is not None:

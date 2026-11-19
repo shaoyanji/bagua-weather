@@ -33,6 +33,13 @@ def main(argv: list[str] | None = None) -> None:
     p_eval.add_argument("--since", default=UTC_ERA_START, help="UTC start cutoff")
     p_eval.add_argument("--reports", default="reports", help="report output dir")
 
+    p_ab = sub.add_parser("ablate", help="M5 state-count ablation (4/8/16)")
+    _station_args(p_ab)
+    p_ab.add_argument("--split", default="2016-01-01")
+    p_ab.add_argument("--alpha", type=float, default=1.0)
+    p_ab.add_argument("--since", default=UTC_ERA_START)
+    p_ab.add_argument("--reports", default="reports")
+
     args = parser.parse_args(argv)
     meta = STATIONS.get(args.station)
     if meta is None:
@@ -65,6 +72,21 @@ def main(argv: list[str] | None = None) -> None:
         summary = run_eval(df, lat=meta["lat"], lon=meta["lon"], split=args.split,
                            alpha=args.alpha, reports_dir=args.reports)
         print(json.dumps(summary, indent=2))
+        return
+
+    if args.cmd == "ablate":
+        from .ablation import run_ablation, verdict
+
+        df = load_hourly(args.station, cache_dir=args.cache, since=args.since)
+        out = run_ablation(df, lat=meta["lat"], lon=meta["lon"], split=args.split,
+                           alpha=args.alpha, reports_dir=args.reports)
+        for r in out["variants"]:
+            print(f"{r['variant']:24s} skill={r['skill_nats']:.3f} nats "
+                  f"LL={r['markov_global_ll']:.3f} top1={r['markov_global_top1']:.3f}")
+        for x in out["cross_comparisons"]:
+            print(f"  {x['target']} predicted by {x['predicted_by']}: "
+                  f"marginalized LL {x['marginalized_ll']:.3f} vs native {x['native_ll']:.3f}")
+        print(verdict(out["variants"], out["cross_comparisons"]))
         return
 
 

@@ -19,7 +19,7 @@ def _features(idx: pd.DatetimeIndex, prev: np.ndarray) -> np.ndarray:
     return np.column_stack([prev, np.sin(h), np.cos(h), np.sin(m), np.cos(m)])
 
 
-def gbm(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray | None:
+def gbm(train: pd.DataFrame, test: pd.DataFrame, n_states: int = N_STATES) -> np.ndarray | None:
     """HistGradientBoosting next-state classifier trained on the train pairs.
 
     Returns an (len(test), N_STATES) probability matrix, or None when
@@ -40,21 +40,21 @@ def gbm(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray | None:
     )
     clf.fit(_features(train.index, train["prev"].to_numpy()), train["nxt"].to_numpy())
     proba = clf.predict_proba(_features(test.index, test["prev"].to_numpy()))
-    full = np.zeros((len(test), N_STATES))
+    full = np.zeros((len(test), n_states))
     full[:, clf.classes_.astype(int)] = proba
     return full
 
 
-def climatology(train: pd.DataFrame, alpha: float = 1.0) -> np.ndarray:
+def climatology(train: pd.DataFrame, alpha: float = 1.0, n_states: int = N_STATES) -> np.ndarray:
     """Marginal state distribution, ignoring the previous state."""
-    p = np.bincount(train["nxt"], minlength=N_STATES) + alpha
+    p = np.bincount(train["nxt"], minlength=n_states) + alpha
     return p / p.sum()
 
 
-def persistence_matrix(train: pd.DataFrame) -> np.ndarray:
+def persistence_matrix(train: pd.DataFrame, n_states: int = N_STATES) -> np.ndarray:
     """'Same as last hour', smoothed: stay with the empirical stay rate, else spread evenly."""
     stay = float((train["prev"] == train["nxt"]).mean())
     stay = min(max(stay, 1e-3), 1 - 1e-3)
-    P = np.full((N_STATES, N_STATES), (1 - stay) / (N_STATES - 1))
+    P = np.full((n_states, n_states), (1 - stay) / (n_states - 1))
     np.fill_diagonal(P, stay)
     return P

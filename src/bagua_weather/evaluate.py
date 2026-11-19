@@ -16,7 +16,12 @@ def _score(probs: np.ndarray, nxt: np.ndarray) -> dict:
     }
 
 
-def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -> dict:
+def evaluate(
+    states: pd.Series,
+    split: str | pd.Timestamp,
+    alpha: float = 1.0,
+    n_states: int = baselines.N_STATES,
+) -> dict:
     """Train on transitions before `split`, test on the rest. Lower log_loss is better."""
     pairs = model.transition_pairs(states)
     split = pd.Timestamp(split)
@@ -27,11 +32,11 @@ def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -
         raise ValueError("empty train or test set; check split date and data coverage")
     prev, nxt = test["prev"].to_numpy(), test["nxt"].to_numpy()
 
-    clim = np.tile(baselines.climatology(train, alpha), (len(test), 1))
-    pers = baselines.persistence_matrix(train)[prev]
-    P_glob = model.fit_transition_matrix(train, alpha)[prev]
+    clim = np.tile(baselines.climatology(train, alpha, n_states), (len(test), 1))
+    pers = baselines.persistence_matrix(train, n_states)[prev]
+    P_glob = model.fit_transition_matrix(train, alpha, n_states)[prev]
 
-    ctx_models = model.fit_contextual(train, alpha)
+    ctx_models = model.fit_contextual(train, alpha, n_states)
     ctx = model.context_labels(test.index).to_numpy()
     P_ctx = np.empty((len(test), P_glob.shape[1]))
     for i, (p, c) in enumerate(zip(prev, ctx)):
@@ -45,7 +50,7 @@ def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -
         "markov_global": _score(P_glob, nxt),
         "markov_contextual": _score(P_ctx, nxt),
     }
-    gbm_probs = baselines.gbm(train, test)
+    gbm_probs = baselines.gbm(train, test, n_states)
     if gbm_probs is not None:
         out["gbm"] = _score(gbm_probs, nxt)
     return out

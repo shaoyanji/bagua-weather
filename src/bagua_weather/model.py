@@ -29,20 +29,22 @@ def context_labels(index: pd.DatetimeIndex) -> pd.Series:
     return pd.Series(labels, index=index)
 
 
-def fit_transition_matrix(pairs: pd.DataFrame, alpha: float = 1.0) -> np.ndarray:
-    """Row-stochastic 8x8 matrix with Laplace smoothing `alpha`."""
-    counts = np.zeros((N_STATES, N_STATES))
+def fit_transition_matrix(
+    pairs: pd.DataFrame, alpha: float = 1.0, n_states: int = N_STATES
+) -> np.ndarray:
+    """Row-stochastic n_states x n_states matrix with Laplace smoothing `alpha`."""
+    counts = np.zeros((n_states, n_states))
     np.add.at(counts, (pairs["prev"].to_numpy(), pairs["nxt"].to_numpy()), 1)
     counts += alpha
     return counts / counts.sum(axis=1, keepdims=True)
 
 
-def fit_contextual(pairs: pd.DataFrame, alpha: float = 1.0) -> dict:
+def fit_contextual(pairs: pd.DataFrame, alpha: float = 1.0, n_states: int = N_STATES) -> dict:
     """One matrix per context label, plus a global fallback under key None."""
     ctx = context_labels(pairs.index)
-    models = {None: fit_transition_matrix(pairs, alpha)}
+    models = {None: fit_transition_matrix(pairs, alpha, n_states)}
     for label, sub in pairs.groupby(ctx.to_numpy()):
-        models[label] = fit_transition_matrix(sub, alpha)
+        models[label] = fit_transition_matrix(sub, alpha, n_states)
     return models
 
 
@@ -56,5 +58,5 @@ def sample_path(P: np.ndarray, start: int, n: int, rng: np.random.Generator) -> 
     path = np.empty(n, dtype=int)
     path[0] = start
     for t in range(1, n):
-        path[t] = rng.choice(N_STATES, p=P[path[t - 1]])
+        path[t] = rng.choice(P.shape[0], p=P[path[t - 1]])
     return path
