@@ -37,7 +37,7 @@ def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -
     for i, (p, c) in enumerate(zip(prev, ctx)):
         P_ctx[i] = ctx_models.get(c, ctx_models[None])[p]
 
-    return {
+    out = {
         "n_train": len(train),
         "n_test": len(test),
         "climatology": _score(clim, nxt),
@@ -45,3 +45,7 @@ def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -
         "markov_global": _score(P_glob, nxt),
         "markov_contextual": _score(P_ctx, nxt),
     }
+    gbm_probs = baselines.gbm(train, test)
+    if gbm_probs is not None:
+        out["gbm"] = _score(gbm_probs, nxt)
+    return out

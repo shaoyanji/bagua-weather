@@ -12,6 +12,7 @@ dependencies = ["numpy", "pandas", "requests", "pvlib", "matplotlib"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
+m4 = ["scikit-learn"]  # M4 stronger-baseline extra (GBM)
 
 [project.scripts]
 bagua = "bagua_weather.cli:main"

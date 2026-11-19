@@ -2,7 +2,7 @@
 
 **An 8-state Markov regime model of weather for energy risk, built on open DWD data.**
 
-Status: **v0.1.0 spec** (core model and tests exist; ingestion, reporting and baselines are to be built).
+Status: **v0.1.0** — M1–M4 done on station 01443 (Freiburg). Numbers below are from real runs; see §12.
 
 ## 1. Idea
 
@@ -92,7 +92,7 @@ src/bagua_weather/
   states.py      # thresholds, encode/decode, trigram labels, classify()   [done]
   solar.py       # daylight masking via pvlib                              [done]
   model.py       # transition pairs, Markov fit, contextual, sampling      [done]
-  baselines.py   # climatology, persistence (+ HMM/GBM in M4)              [partial]
+  baselines.py   # climatology, persistence, GBM (M4, sklearn extra)       [done M4]
   evaluate.py    # chronological eval vs baselines                         [done]
   ingest.py      # DWD fetch + load_hourly                                 [done M1]
   fit.py         # fit pipeline: classify->mask->pairs->fit->save          [done M2]
@@ -139,7 +139,37 @@ ruff check .
 
 ## 12. Results
 
-_To be filled in after M3 with real numbers. Do not invent any._
+Real run, station 01443 (Freiburg), `bagua eval` at split 2016-01-01.
+Data: 203,297 UTC-hourly rows (2003-09-01 → 2026-11-18) → 152,026 classified states
+→ **91,630 daylight states** after the solar-elevation mask → 44,137 train / 38,983
+test transition pairs.
+
+**Next-state prediction (held-out, daylight hours only):**
+
+| Model | Log loss ↓ | Top-1 acc ↑ |
+|---|---|---|
+| climatology | 1.388 | 0.444 |
+| persistence | 1.048 | 0.750 |
+| markov_global | 0.784 | 0.750 |
+| markov_contextual | 0.769 | 0.750 |
+| **gbm (M4)** | **0.758** | **0.750** |
+
+Findings:
+
+- All structured models beat climatology decisively; the Markov chain beats persistence on *probability quality* (log loss) at equal top-1 — it knows *how sure* to be, not just *what* is likeliest.
+- Context (season × hour bucket) adds only ~0.015 log loss — Freiburg's hourly regimes are already well captured by the previous state alone.
+- The tuned GBM baseline (categorical `prev`, l2, early stopping on train-internal validation) edges the contextual chain (0.758 vs 0.769) — a narrow win, not a rout. The 8-state first-order model is competitive.
+- Stationary distribution vs empirical test frequencies: TVD **0.037** — the chain's long-run state mix matches reality well.
+- Dwell times: empirical mean runs are *shorter* than the geometric prediction (e.g. Zhen ☳ 4.8h vs 7.1h, Kun ☷ 2.7h vs 3.5h). Partly this is censoring — the daylight mask truncates every run at nightfall, so >24h runs are structurally impossible — but short-run deviations are also visible within daylight windows.
+
+**Limitations (honest):**
+
+- One station, one era. Freiburg 2003–2026 says nothing about coastal or alpine regimes.
+- Dwell comparison is right-censored by the daylight mask; cross-midnight regime persistence is unmeasured by construction.
+- GBM early stopping uses a *random* 15% of the train slice — not chronological — acceptable inside train, stated anyway.
+- Sun-column gaps: `sun_minutes` is missing for ~25% of rows (instrument outages), so "daylight states" understates true coverage.
+- M5 state-count ablation (4/8/16 states) not run — stretch goal, open.
+- Thresholds (sun 30min, wind 5m/s, wet 0.1mm) are the spec defaults; no sensitivity grid run yet.
 
 ## License
 
