@@ -35,6 +35,9 @@ class Thresholds:
     precip_mm: float = 0.1  # hourly precipitation mm; >= this -> wet
 
 
+DEFAULT_THRESHOLDS = Thresholds()
+
+
 def encode(sun: bool, wind: bool, wet: bool) -> int:
     return (int(sun) << 2) | (int(wind) << 1) | int(wet)
 
@@ -50,7 +53,7 @@ def label(state: int) -> str:
     return f"{glyph} {name}"
 
 
-def classify(df: pd.DataFrame, th: Thresholds = Thresholds()) -> pd.Series:
+def classify(df: pd.DataFrame, th: Thresholds = DEFAULT_THRESHOLDS) -> pd.Series:
     """Map hourly observations to states (nullable Int8; <NA> if any input is missing).
 
     Expects columns: sun_minutes, wind_ms, precip_mm (DWD -999 already converted to NaN).

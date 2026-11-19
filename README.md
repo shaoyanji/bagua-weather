@@ -30,11 +30,13 @@ The trigram framing is a naming layer only. **The numbers have to carry the proj
 Source: DWD Climate Data Center, open hourly station observations
 (`https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/`).
 
-| Variable | DWD product dir | Column (verify!) | Unit | Notes |
+| Variable | DWD product dir | Column | Unit | Notes |
 |---|---|---|---|---|
 | Sunshine duration | `sun` | `SD_SO` | min per hour | 0 at night by construction |
-| Wind speed | `wind` | `F` | m/s | hourly mean |
+| Wind speed | `wind` | `F` | m/s | hourly mean (direction is `D`) |
 | Precipitation | `precipitation` | `R1` | mm | `RS_IND` is the 0/1 indicator |
+
+Verified against the DESCRIPTION PDFs and the station-01443 metadata (2026-11-19): the column table above is correct. **Timestamp caveat:** `MESS_DATUM` (`YYYYMMDDHH`) is *not* uniformly UTC — Freiburg sun data is WOZ before 2002-07-01 and wind is MEZ before 2003-09-01; the all-UTC overlap begins **2003-09-01**, which `load_hourly` applies as the default `since` cutoff.
 
 Requirements and traps:
 - **Discover files by listing the directory**; do not hard-code zip names. Both `historical` and `recent` folders exist and must be merged (de-duplicate overlapping timestamps).
@@ -92,7 +94,7 @@ src/bagua_weather/
   model.py       # transition pairs, Markov fit, contextual, sampling      [done]
   baselines.py   # climatology, persistence (+ HMM/GBM in M4)              [partial]
   evaluate.py    # chronological eval vs baselines                         [done]
-  ingest.py      # DWD fetch + load_hourly                                 [TODO M1]
+  ingest.py      # DWD fetch + load_hourly                                 [done M1]
   simulate.py    # scenario paths + payoff pricing                         [v0.2.0]
   cli.py         # `bagua fetch|fit|eval`                                  [TODO M2/M3]
 tests/           # pytest; synthetic-chain tests must keep passing

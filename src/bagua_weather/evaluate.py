@@ -38,8 +38,8 @@ def evaluate(states: pd.Series, split: str | pd.Timestamp, alpha: float = 1.0) -
         P_ctx[i] = ctx_models.get(c, ctx_models[None])[p]
 
     return {
-        "n_train": int(len(train)),
-        "n_test": int(len(test)),
+        "n_train": len(train),
+        "n_test": len(test),
         "climatology": _score(clim, nxt),
         "persistence": _score(pers, nxt),
         "markov_global": _score(P_glob, nxt),
