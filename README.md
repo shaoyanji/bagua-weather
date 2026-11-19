@@ -96,7 +96,7 @@ src/bagua_weather/
   evaluate.py    # chronological eval vs baselines                         [done]
   ingest.py      # DWD fetch + load_hourly                                 [done M1]
   fit.py         # fit pipeline: classify->mask->pairs->fit->save          [done M2]
-  report.py      # metrics.json + figures                                  [TODO M3]
+  report.py      # metrics.json + figures                                  [done M3]
   simulate.py    # scenario paths + payoff pricing                         [v0.2.0]
   cli.py         # `bagua fetch|fit|eval`                                  [done M2 fetch/fit]
 tests/           # pytest; synthetic-chain tests must keep passing
