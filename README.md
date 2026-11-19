@@ -222,4 +222,4 @@ Artifacts: `reports/ablation.json` (gitignored). Air temperature product
 
 ## License
 
-TBD (suggest MIT).
+MIT — see `LICENSE`.

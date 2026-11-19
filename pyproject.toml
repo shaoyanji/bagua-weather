@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "8-state Markov regime model of weather for energy risk, built on open DWD data"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
 dependencies = ["numpy", "pandas", "requests", "pvlib", "matplotlib"]
 
 [project.optional-dependencies]
