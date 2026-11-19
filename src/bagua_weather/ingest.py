@@ -45,6 +45,13 @@ PRODUCTS = {
 # 2003-09-01 (sun: WOZ earlier; wind: MEZ earlier). Default analysis window.
 UTC_ERA_START = "2003-09-01"
 
+# Verified station coordinates (Metadaten_Geographie, current position from
+# 2006-11-23). Solar masking uses these; the pre-2006 site was ~2.5 km away,
+# a negligible elevation-angle difference at 5° masking threshold.
+STATIONS = {
+    "01443": {"name": "Freiburg", "lat": 48.0232, "lon": 7.8343, "elevation_m": 236.46},
+}
+
 _MISSING = -999.0
 
 

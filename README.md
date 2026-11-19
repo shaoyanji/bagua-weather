@@ -95,8 +95,10 @@ src/bagua_weather/
   baselines.py   # climatology, persistence (+ HMM/GBM in M4)              [partial]
   evaluate.py    # chronological eval vs baselines                         [done]
   ingest.py      # DWD fetch + load_hourly                                 [done M1]
+  fit.py         # fit pipeline: classify->mask->pairs->fit->save          [done M2]
+  report.py      # metrics.json + figures                                  [TODO M3]
   simulate.py    # scenario paths + payoff pricing                         [v0.2.0]
-  cli.py         # `bagua fetch|fit|eval`                                  [TODO M2/M3]
+  cli.py         # `bagua fetch|fit|eval`                                  [done M2 fetch/fit]
 tests/           # pytest; synthetic-chain tests must keep passing
 data/            # raw/ and processed/ are gitignored
 reports/         # generated report + figures (gitignored images)
